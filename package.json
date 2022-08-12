@@ -1,0 +1,21 @@
+{
+  "name": "quilt-designer",
+  "version": "1.0.0",
+  "description": "For keeping score",
+  "scripts": {
+    "dev": "elm-go src/Main.elm --dir dist --start-page index.html -- --output dist/elm.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wolfadex/quilt-designer.git"
+  },
+  "author": "Wolfgang Schuster",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wolfadex/quilt-designer/issues"
+  },
+  "homepage": "https://github.com/wolfadex/quilt-designer#readme",
+  "devDependencies": {
+    "elm-go": "^5.0.14"
+  }
+}
