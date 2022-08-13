@@ -1,5 +1,7 @@
-module Main exposing (Model, Msg, main)
+module Main exposing (Block, Model, Msg, main)
 
+import Array exposing (Array)
+import Array.Extra
 import Browser
 import Element exposing (..)
 import Element.Background as Background
@@ -32,6 +34,14 @@ type alias Model =
     { quiltWidth : ( String, Length )
     , quiltHeight : ( String, Length )
     , zoom : Float
+    , blocks : Array Block
+    }
+
+
+type alias Block =
+    { width : ( String, Length )
+    , height : ( String, Length )
+    , label : String
     }
 
 
@@ -44,6 +54,7 @@ init =
     { quiltWidth = ( "1", Length.meters 1 )
     , quiltHeight = ( "2", Length.meters 2 )
     , zoom = 1
+    , blocks = Array.empty
     }
 
 
@@ -55,6 +66,9 @@ type Msg
     = GotWidth String
     | GotHeight String
     | GotZoom Float
+    | CreateBlock
+    | GotBlockName Int String
+    | GotBlockWidth Int String
 
 
 update : Msg -> Model -> Model
@@ -89,6 +103,45 @@ update msg model =
         GotZoom zoom ->
             { model | zoom = zoom }
 
+        CreateBlock ->
+            { model
+                | blocks =
+                    Array.push
+                        { width = ( "0.25", Length.meters 0.25 )
+                        , height = ( "0.25", Length.meters 0.25 )
+                        , label = ""
+                        }
+                        model.blocks
+            }
+
+        GotBlockName index label ->
+            { model
+                | blocks =
+                    Array.Extra.update index
+                        (\block -> { block | label = label })
+                        model.blocks
+            }
+
+        GotBlockWidth index widthStr ->
+            { model
+                | blocks =
+                    Array.Extra.update index
+                        (\block ->
+                            { block
+                                | width =
+                                    ( widthStr
+                                    , case String.toFloat widthStr of
+                                        Nothing ->
+                                            Tuple.second block.width
+
+                                        Just width ->
+                                            Length.meters width
+                                    )
+                            }
+                        )
+                        model.blocks
+            }
+
 
 
 -- VIEW
@@ -96,8 +149,7 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    layout []
-        (viewModel model)
+    layout [] (viewModel model)
 
 
 viewModel : Model -> Element Msg
@@ -118,46 +170,103 @@ viewModel model =
                 , width fill
                 , alignTop
                 ]
-                [ Input.text
-                    []
-                    { onChange = GotWidth
-                    , placeholder = Nothing
-                    , label = Input.labelAbove [] (text "Width (m)")
-                    , text = Tuple.first model.quiltWidth
-                    }
-                , Input.text
-                    []
-                    { onChange = GotHeight
-                    , placeholder = Nothing
-                    , label = Input.labelAbove [] (text "Height (m)")
-                    , text = Tuple.first model.quiltHeight
-                    }
-                , Input.slider
-                    [ behindContent
-                        (el
-                            [ width fill
-                            , height (px 2)
-                            , centerY
-                            , Background.color (rgb 0.2 0.2 0.2)
-                            , Border.rounded 2
-                            ]
-                            none
-                        )
+                [ text "Quilt"
+                , quiltProperties model
+                , propertiesSpacer
+                , text "Blocks"
+                , Input.button
+                    [ paddingXY 16 8
+                    , Border.width 3
+                    , Border.color (rgb 0.5 0.7 0.6)
                     ]
-                    { label = Input.labelAbove [] (text "Zoom")
-                    , max = 10
-                    , min = 1
-                    , onChange = GotZoom
-                    , step = Just 0.25
-                    , thumb = Input.defaultThumb
-                    , value = model.zoom
+                    { onPress = Just CreateBlock
+                    , label = text "Create Block"
                     }
+                , model.blocks
+                    |> Array.toIndexedList
+                    |> List.map viewBlockProperties
+                    |> column [ spacing 8, padding 16 ]
                 ]
             , viewDesigner model
                 |> html
                 |> el [ alignTop ]
             ]
         ]
+
+
+viewBlockProperties : ( Int, Block ) -> Element Msg
+viewBlockProperties ( index, block ) =
+    column
+        [ spacing 8 ]
+        [ Input.text
+            []
+            { label = Input.labelHidden "block label"
+            , placeholder = Just (Input.placeholder [] (text "Block Label"))
+            , text = block.label
+            , onChange = GotBlockName index
+            }
+        , Input.text
+            []
+            { label = Input.labelAbove [] (text "Width (m)")
+            , placeholder = Nothing
+            , text = Tuple.first block.width
+            , onChange = GotBlockWidth index
+            }
+        ]
+
+
+quiltProperties : Model -> Element Msg
+quiltProperties model =
+    column
+        [ padding 16
+        , spacing 8
+        , width fill
+        ]
+        [ Input.text
+            []
+            { onChange = GotWidth
+            , placeholder = Nothing
+            , label = Input.labelAbove [] (text "Width (m)")
+            , text = Tuple.first model.quiltWidth
+            }
+        , Input.text
+            []
+            { onChange = GotHeight
+            , placeholder = Nothing
+            , label = Input.labelAbove [] (text "Height (m)")
+            , text = Tuple.first model.quiltHeight
+            }
+        , Input.slider
+            [ behindContent
+                (el
+                    [ width fill
+                    , height (px 2)
+                    , centerY
+                    , Background.color (rgb 0.2 0.2 0.2)
+                    , Border.rounded 2
+                    ]
+                    none
+                )
+            ]
+            { label = Input.labelAbove [] (text "Zoom")
+            , max = 10
+            , min = 1
+            , onChange = GotZoom
+            , step = Just 0.25
+            , thumb = Input.defaultThumb
+            , value = model.zoom
+            }
+        ]
+
+
+propertiesSpacer : Element Msg
+propertiesSpacer =
+    el
+        [ Border.widthEach { top = 1, bottom = 0, left = 0, right = 0 }
+        , width fill
+        , Border.color (rgb 0.5 0.5 0.5)
+        ]
+        none
 
 
 viewDesigner : Model -> Html Msg
