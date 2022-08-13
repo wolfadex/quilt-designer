@@ -6,6 +6,7 @@ import Browser
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
+import Element.Font as Font
 import Element.Input as Input
 import Geometry.Svg
 import Html exposing (Html)
@@ -15,6 +16,7 @@ import LineSegment2d
 import Point2d
 import Svg
 import Svg.Attributes
+import Tooltip exposing (Dimensions, Position(..))
 
 
 main : Program () Model Msg
@@ -42,6 +44,7 @@ type alias Block =
     { width : ( String, Length )
     , height : ( String, Length )
     , label : String
+    , confirmDelete : Maybe Dimensions
     }
 
 
@@ -69,6 +72,9 @@ type Msg
     | CreateBlock
     | GotBlockName Int String
     | GotBlockWidth Int String
+    | PromptDeleteBlock Int Dimensions
+    | CancelDeleteBlock Int
+    | ConfirmDeleteBlock Int
 
 
 update : Msg -> Model -> Model
@@ -110,6 +116,7 @@ update msg model =
                         { width = ( "0.25", Length.meters 0.25 )
                         , height = ( "0.25", Length.meters 0.25 )
                         , label = ""
+                        , confirmDelete = Nothing
                         }
                         model.blocks
             }
@@ -140,6 +147,30 @@ update msg model =
                             }
                         )
                         model.blocks
+            }
+
+        PromptDeleteBlock index dimensions ->
+            { model
+                | blocks =
+                    Array.Extra.update index
+                        (\block -> { block | confirmDelete = Just dimensions })
+                        model.blocks
+            }
+
+        CancelDeleteBlock index ->
+            { model
+                | blocks =
+                    Array.Extra.update index
+                        (\block -> { block | confirmDelete = Nothing })
+                        model.blocks
+            }
+
+        ConfirmDeleteBlock index ->
+            { model
+                | blocks =
+                    Array.append
+                        (Array.slice 0 index model.blocks)
+                        (Array.slice (index + 1) (Array.length model.blocks) model.blocks)
             }
 
 
@@ -198,13 +229,60 @@ viewBlockProperties : ( Int, Block ) -> Element Msg
 viewBlockProperties ( index, block ) =
     column
         [ spacing 8 ]
-        [ Input.text
-            []
-            { label = Input.labelHidden "block label"
-            , placeholder = Just (Input.placeholder [] (text "Block Label"))
-            , text = block.label
-            , onChange = GotBlockName index
-            }
+        [ row
+            [ spacing 8 ]
+            [ Input.text
+                []
+                { label = Input.labelHidden "block label"
+                , placeholder = Just (Input.placeholder [] (text "Block Label"))
+                , text = block.label
+                , onChange = GotBlockName index
+                }
+            , Tooltip.view
+                { onPress = PromptDeleteBlock index
+                , position =
+                    case block.confirmDelete of
+                        Nothing ->
+                            Nothing
+
+                        Just pos ->
+                            Just (AboveRight { x = pos.x, y = pos.y - pos.height })
+                , trigger =
+                    layoutWith { options = [ noStaticStyleSheet ] }
+                        []
+                        (el
+                            [ paddingXY 16 8
+                            , Border.width 3
+                            , Border.color (rgb 0.5 0.7 0.6)
+                            ]
+                            (text "Delete")
+                        )
+                , content =
+                    layoutWith { options = [ noStaticStyleSheet ] }
+                        []
+                        (row
+                            [ padding 8
+                            , spacing 8
+                            , Background.color (rgb 0.1 0.1 0.1)
+                            , Border.rounded 8
+                            , Font.color (rgb 1 1 1)
+                            ]
+                            [ Input.button
+                                []
+                                { onPress = Just (CancelDeleteBlock index)
+                                , label = text "Cancel"
+                                }
+                            , Input.button
+                                []
+                                { onPress = Just (ConfirmDeleteBlock index)
+                                , label = text "Confirm"
+                                }
+                            ]
+                        )
+                }
+                |> html
+                |> el []
+            ]
         , Input.text
             []
             { label = Input.labelAbove [] (text "Width (m)")
