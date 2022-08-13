@@ -1,6 +1,5 @@
 module Tooltip exposing (Dimensions, Position(..), view)
 
-import Browser.Dom
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
