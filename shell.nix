@@ -9,6 +9,11 @@ with pkgs;
 mkShell {
   # Sets the build inputs, i.e. what will be available in our
   # local environment.
-  buildInputs =
-    [ elmPackages.elm elmPackages.nodejs elmPackages.elm-format git ];
+  buildInputs = [
+    elmPackages.elm
+    elmPackages.elm-format
+    elmPackages.elm-review
+    elmPackages.nodejs
+    git
+  ];
 }
