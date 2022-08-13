@@ -37,6 +37,7 @@ type alias Model =
     , quiltHeight : ( String, Length )
     , zoom : Float
     , blocks : Array Block
+    , activeBlock : Maybe Int
     }
 
 
@@ -58,6 +59,7 @@ init =
     , quiltHeight = ( "2", Length.meters 2 )
     , zoom = 1
     , blocks = Array.empty
+    , activeBlock = Nothing
     }
 
 
@@ -75,11 +77,15 @@ type Msg
     | PromptDeleteBlock Int Dimensions
     | CancelDeleteBlock Int
     | ConfirmDeleteBlock Int
+    | GotActiveBlock (Maybe Int)
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
+        GotActiveBlock activeBlock ->
+            { model | activeBlock = activeBlock }
+
         GotWidth widthStr ->
             { model
                 | quiltWidth =
@@ -218,11 +224,63 @@ viewModel model =
                     |> List.map viewBlockProperties
                     |> column [ spacing 8, padding 16 ]
                 ]
-            , viewDesigner model
-                |> html
-                |> el [ alignTop ]
+            , column
+                [ alignTop ]
+                [ model.blocks
+                    |> Array.toIndexedList
+                    |> List.map (viewBlockTab model.activeBlock)
+                    |> (::) (viewQuiltTab model.activeBlock)
+                    |> List.intersperse tabSpacer
+                    |> row []
+                , viewDesigner model
+                    |> html
+                    |> el []
+                ]
             ]
         ]
+
+
+tabSpacer : Element Msg
+tabSpacer =
+    el [ height fill, Border.width 1 ] none
+
+
+viewQuiltTab : Maybe Int -> Element Msg
+viewQuiltTab active =
+    Input.button
+        [ paddingXY 16 8
+        , Background.color <|
+            case active of
+                Nothing ->
+                    rgb 0.7 0.9 0.7
+
+                Just _ ->
+                    rgb 0.9 0.9 0.9
+        ]
+        { onPress = Just (GotActiveBlock Nothing)
+        , label = text "Quilt"
+        }
+
+
+viewBlockTab : Maybe Int -> ( Int, Block ) -> Element Msg
+viewBlockTab active ( index, block ) =
+    Input.button
+        [ paddingXY 16 8
+        , Background.color <|
+            case active of
+                Nothing ->
+                    rgb 0.9 0.9 0.9
+
+                Just id ->
+                    if id == index then
+                        rgb 0.7 0.9 0.7
+
+                    else
+                        rgb 0.9 0.9 0.9
+        ]
+        { onPress = Just (GotActiveBlock (Just index))
+        , label = text (block.label ++ " (Block)")
+        }
 
 
 viewBlockProperties : ( Int, Block ) -> Element Msg
