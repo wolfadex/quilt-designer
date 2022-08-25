@@ -13,7 +13,7 @@ mkShell {
     elmPackages.elm
     elmPackages.elm-format
     elmPackages.elm-review
-    elmPackages.nodejs
+    nodejs-18_x
     git
   ];
 }

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "For keeping score",
   "scripts": {
-    "dev": "elm-go src/Main.elm --dir dist --start-page index.html -- --output dist/elm.js",
+    "dev": "elm-go src/Main.elm --dir dist --start-page index.html -- --debug --output dist/elm.js",
     "review": "elm-review --watch --fix"
   },
   "repository": {
